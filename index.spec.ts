@@ -1,8 +1,14 @@
 import { Serializable, SerializableAttr, serialize, NonSerialized } from '.';
 
+abstract class Bean {
+  constructor(data: any) {
+    Object.keys(data).forEach(k => (this as any)[k] = data[k]);
+  }
+}
+
 describe('ts-serialize', () => {
   @Serializable()
-  class A {
+  class A extends Bean {
     @SerializableAttr({transformer: id => Buffer.from(id).toString('base64')})
     id: string;
     @SerializableAttr({level: 'protected'})
@@ -13,9 +19,18 @@ describe('ts-serialize', () => {
     @NonSerialized()
     @SerializableAttr({level: 'protected'})
     attr4: boolean;
-    constructor(data: any) {
-      Object.keys(data).forEach(k => (this as any)[k] = data[k]);
-    }
+  }
+
+  class Nested extends Bean {
+    @SerializableAttr({transformer: id => Buffer.from(id).toString('base64')})
+    id: string;
+  }
+
+  class Container extends Bean {
+    @SerializableAttr({transformer: id => Buffer.from(id).toString('base64')})
+    id: string;
+    @SerializableAttr()
+    nested: Nested;
   }
 
   it('should serialize correctly', () => {
@@ -32,20 +47,22 @@ describe('ts-serialize', () => {
     expect(JSON.parse(serialize(new A({id: '1', attr1: '2', attr2: '3'}), {level: 'protected'})))
       .toEqual({id: 'MQ==', attr1: '2', attr2: '3'});
   });
+  it('should handle nested serialization', () => {
+    const nested = new Nested({id: 'nested'});
+    expect(JSON.parse(serialize(new Container({id: '1', nested}))))
+      .toEqual({id: 'MQ==', nested: {id: 'bmVzdGVk'}});
+  });
 });
 
 describe('strict mode', () => {
   @Serializable({strict: true})
-  class A {
+  class A extends Bean {
     @SerializableAttr({})
     attr1: boolean;
     attr2: boolean;
-    constructor(data: any) {
-      Object.keys(data).forEach(k => (this as any)[k] = data[k]);
-    }
   }
   it('should serialize only fields which declared explict', () => {
     expect(JSON.parse(serialize(new A({attr1: '2', attr2: '3'}), {level: 'protected'})))
       .toEqual({attr1: '2'});
-  })
+  });
 })

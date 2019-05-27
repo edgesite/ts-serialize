@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc -p .",
-    "prepublish": "yarn build"
+    "test": "jest",
+    "prepublish": "yarn build && yarn test"
   },
   "devDependencies": {
     "@types/jest": "^24.0.13",
